@@ -32,9 +32,17 @@ async def help(message):
 async def echo(message):
     await sendEmbed(message.channel, message)
 
-async def reply(message):    
+async def reply(message):
+    global previous
+    previousChannel = previous    
+    
+    if previousChannel == None:
+        await sendMessage(message.channel, 'I haven\'t seen any messages from other channels yet!')
+        return 
+
     if message.channel == theplus:
-        await sendEmbed(previous, message)
+        await sendEmbed(previousChannel, message)
+        await sendMessage(message.channel, '@%s, your message was sent successfully to **#%s**' % (message.author.nick, previousChannel.name))
     else:
         await sendMessage(message.channel, '``/re`` doesn\'t work outside of **#theplus**')
 
