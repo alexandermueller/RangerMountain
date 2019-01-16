@@ -91,8 +91,11 @@ async def execute(command, message):
     elif command == '/at':
         await forward(message)
     elif command == '/clear':
-        await clear()
-        await mentionUser(theplus, message.author, '``/clear`` complete! 👌')
+        if message.channel == theplus:
+            await clear()
+            await mentionUser(theplus, message.author, '``/clear`` complete! 👌')
+        else:
+            await sendError(message, '``/clear`` should only be executed from within %s' % theplus.mention)
 
 async def addOkReaction(message):
     await bot.add_reaction(message, '👌')
