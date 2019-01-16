@@ -59,7 +59,7 @@ async def forward(message):
             await sendEmbed(channel, message)
             await addOkReaction(message)
         else:
-            await sendMessage(message.channel, '``/at`` should only be used to send messages to other channels')    
+            await sendMessage(message.channel, '``/at`` should only be used to send messages to other channels')
     else:
         await sendMessage(message.channel, '``/at`` must be given a valid channel name on this server')
     
@@ -95,6 +95,9 @@ async def execute(command, message):
 
 async def addOkReaction(message):
     await bot.add_reaction(message, '👌')
+
+# async def addThinkingReaction(message):
+    # await bot.add_reaction(message, '🤔')
 
 #Send functions
 
