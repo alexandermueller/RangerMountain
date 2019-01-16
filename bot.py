@@ -14,7 +14,7 @@ COMMANDS = {
              '/at'   : 'I\'ll send your message to the channel provided, eg: ``/at #validchannelname text``'   
            }
 
-client = discord.Client()
+bot = discord.Client()
 channelDict = {}
 theplus = None
 previous = None
@@ -42,7 +42,7 @@ async def reply(message):
 
     if message.channel == theplus:
         await sendEmbed(previousChannel, message)
-        await sendMessage(message.channel, '@%s, your message was sent successfully to **#%s**' % (message.author.nick, previousChannel.name))
+        await addOkReaction(message)
     else:
         await sendMessage(message.channel, '``/re`` doesn\'t work outside of **#theplus**')
 
@@ -52,12 +52,12 @@ async def forward(message):
     
     if match:
         channelId = match.group(0)[2:-1]
-        channel = client.get_channel(channelId)
+        channel = bot.get_channel(channelId)
         message.content = rest(message.content)
 
         if channel != message.channel: 
             await sendEmbed(channel, message)
-            await sendMessage(message.channel, '@%s, your message was sent successfully to **#%s**' % (message.author.nick, channel))
+            await addOkReaction(message)
         else:
             await sendMessage(message.channel, '``/at`` should only be used to send messages to other channels')    
     else:
@@ -93,13 +93,16 @@ async def execute(command, message):
     elif command == '/at':
         await forward(message)
 
+async def addOkReaction(message):
+    await bot.add_reaction(message, '👌')
+
 #Send functions
 
 async def sendAttachment(channel, attachment):
-    await client.send_message(channel, attachment['url'])
+    await bot.send_message(channel, attachment['url'])
 
 async def sendMessage(channel, content):
-    await client.send_message(channel, content)
+    await bot.send_message(channel, content)
 
 async def sendEmbed(channel, message):
     author = message.author
@@ -108,7 +111,7 @@ async def sendEmbed(channel, message):
     embed = discord.Embed()
     embed.set_author(name = '%s @%s:' % (author.nick, message.channel.name), icon_url = author.avatar_url)
 
-    await client.send_message(channel, embed = embed)
+    await bot.send_message(channel, embed = embed)
 
     if len(content) > 0:
         await sendMessage(channel, content)
@@ -116,12 +119,12 @@ async def sendEmbed(channel, message):
     for attachment in message.attachments:
         await sendAttachment(channel, attachment)
 
-@client.event
+@bot.event
 async def on_message(message):
     global previous
 
     # we do not want the bot to reply to itself
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
     author = message.author
@@ -135,14 +138,14 @@ async def on_message(message):
             previous = channel
             await sendEmbed(theplus, message)
 
-@client.event
+@bot.event
 async def on_ready():
     global channelDict, theplus
 
     print()
-    print('Logged in as "%s" - %s ' % (client.user.name, client.user.id))
+    print('Logged in as "%s" - %s ' % (bot.user.name, bot.user.id))
 
-    channels = client.get_all_channels()
+    channels = bot.get_all_channels()
     channelDict = { channel.name : channel for channel in channels }
 
     if OUTPUT_CHANNEL not in channelDict:
@@ -154,9 +157,9 @@ async def on_ready():
             print(' - \"%s\"' % name)
         print()
 
-        client.close()
+        bot.close()
         os._exit(0)
     else:
         theplus = channelDict[OUTPUT_CHANNEL]
 
-client.run(TOKEN)
+bot.run(TOKEN)
