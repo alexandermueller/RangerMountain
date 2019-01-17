@@ -122,7 +122,7 @@ async def sendEmbed(channel, message):
     content = message.content
 
     embed = discord.Embed()
-    embed.set_author(name = '%s @%s:' % (author.nick, message.channel.name), icon_url = author.avatar_url)
+    embed.set_author(name = '%s via #%s:' % (author.nick, message.channel.name), icon_url = author.avatar_url)
 
     await bot.send_message(channel, embed = embed)
 
