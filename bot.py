@@ -7,44 +7,39 @@ import re
 
 TOKEN = 'NTM0NTczMDY0NTkyMTYyODE5.DyArTA.37TPWbxZarB8fPlsrE042tAKsHY'
 OUTPUT_CHANNEL = 'theplus' 
-COMMANDS = { 
-             '/help' : 'Use this to tell you about all the things I can do!', 
-             '/echo' : 'I\'ll echo your message back at you with ``/echo text``',
-             '/re'   : 'I\'ll send your message to the previous channel! Note: This only works from **#theplus**',
-             '/at'   : 'I\'ll send your message to the channel provided, eg: ``/at #validchannelname text``'   
-           }
 
-client = discord.Client()
+bot = discord.Client()
 channelDict = {}
+commands = {}
 theplus = None
 previous = None
 
-#Commands
+# Commands #
 
 async def help(message):
     content = 'This is what I can do for you:\n\n'
 
-    for command, description in COMMANDS.items():
-        content += '%s : %s\n' % (command, description)
+    for command, description in commands.items():
+        content += '``%s`` : %s\n' % (command, description)
 
-    await sendMessage(message.channel, content)
+    await mentionUser(message.channel, message.author, content)
 
 async def echo(message):
     await sendEmbed(message.channel, message)
 
 async def reply(message):
-    global previous
+    global previous, theplus
     previousChannel = previous    
     
     if previousChannel == None:
-        await sendMessage(message.channel, 'I haven\'t seen any messages from other channels yet!')
+        await sendError(message, 'I haven\'t seen any messages from other channels yet!')
         return 
 
     if message.channel == theplus:
         await sendEmbed(previousChannel, message)
-        await sendMessage(message.channel, '@%s, your message was sent successfully to **#%s**' % (message.author.nick, previousChannel.name))
+        await addOkReaction(message)
     else:
-        await sendMessage(message.channel, '``/re`` doesn\'t work outside of **#theplus**')
+        await sendError(message, '``/re`` doesn\'t work outside of %s' % theplus.mention)
 
 async def forward(message):
     channelRepresentation = firstWord(message.content)
@@ -52,19 +47,22 @@ async def forward(message):
     
     if match:
         channelId = match.group(0)[2:-1]
-        channel = client.get_channel(channelId)
+        channel = bot.get_channel(channelId)
         message.content = rest(message.content)
 
         if channel != message.channel: 
             await sendEmbed(channel, message)
-            await sendMessage(message.channel, '@%s, your message was sent successfully to **#%s**' % (message.author.nick, channel))
+            await addOkReaction(message)
         else:
-            await sendMessage(message.channel, '``/at`` should only be used to send messages to other channels')    
+            await sendError(message, '``/at`` should only be used to send messages to other channels')
     else:
-        await sendMessage(message.channel, '``/at`` must be given a valid channel name on this server')
+        await sendError(message, '``/at`` must be given a valid channel name on this server')
     
+async def clear():
+    async for message in bot.logs_from(theplus):
+        await bot.delete_message(message)
 
-#Helpers
+# Helpers #
 
 def firstWord(string):
     components = string.split()
@@ -75,10 +73,10 @@ def rest(string):
     return ' '.join(components[1:]) if len(components) > 1 else ''
 
 def isACommand(string):
-    return string in COMMANDS
+    return string in commands
 
 async def execute(command, message):
-    if command not in COMMANDS:
+    if command not in commands:
         print('Error: command "%s" couldn\'t be found.')
         return
 
@@ -92,14 +90,32 @@ async def execute(command, message):
         await reply(message)
     elif command == '/at':
         await forward(message)
+    elif command == '/clear':
+        if message.channel == theplus:
+            await clear()
+            await mentionUser(theplus, message.author, '``/clear`` complete! 👌')
+        else:
+            await sendError(message, '``/clear`` should only be executed from within %s' % theplus.mention)
 
-#Send functions
+async def addOkReaction(message):
+    await bot.add_reaction(message, '👌')
+
+# async def addThinkingReaction(message):
+    # await bot.add_reaction(message, '🤔')
+
+# Send Functions #
+
+async def mentionUser(channel, author, messageString):
+    await sendMessage(channel, '%s: %s' % (author.mention, messageString))
+
+async def sendError(message, errorString):
+    await sendMessage(message.channel, '%s: %s 🤔' % (message.author.mention, errorString))
 
 async def sendAttachment(channel, attachment):
-    await client.send_message(channel, attachment['url'])
+    await bot.send_message(channel, attachment['url'])
 
 async def sendMessage(channel, content):
-    await client.send_message(channel, content)
+    await bot.send_message(channel, content)
 
 async def sendEmbed(channel, message):
     author = message.author
@@ -108,7 +124,7 @@ async def sendEmbed(channel, message):
     embed = discord.Embed()
     embed.set_author(name = '%s @%s:' % (author.nick, message.channel.name), icon_url = author.avatar_url)
 
-    await client.send_message(channel, embed = embed)
+    await bot.send_message(channel, embed = embed)
 
     if len(content) > 0:
         await sendMessage(channel, content)
@@ -116,12 +132,14 @@ async def sendEmbed(channel, message):
     for attachment in message.attachments:
         await sendAttachment(channel, attachment)
 
-@client.event
+# Events #        
+        
+@bot.event
 async def on_message(message):
     global previous
 
     # we do not want the bot to reply to itself
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
     author = message.author
@@ -135,14 +153,14 @@ async def on_message(message):
             previous = channel
             await sendEmbed(theplus, message)
 
-@client.event
+@bot.event
 async def on_ready():
-    global channelDict, theplus
+    global channelDict, theplus, commands
 
     print()
-    print('Logged in as "%s" - %s ' % (client.user.name, client.user.id))
+    print('Logged in as "%s" - %s ' % (bot.user.name, bot.user.id))
 
-    channels = client.get_all_channels()
+    channels = bot.get_all_channels()
     channelDict = { channel.name : channel for channel in channels }
 
     if OUTPUT_CHANNEL not in channelDict:
@@ -154,9 +172,16 @@ async def on_ready():
             print(' - \"%s\"' % name)
         print()
 
-        client.close()
+        bot.close()
         os._exit(0)
     else:
         theplus = channelDict[OUTPUT_CHANNEL]
+        commands = { 
+                    '/help'  : 'Use this to tell you about all the things I can do!', 
+                    '/echo'  : 'I\'ll echo your message back at you with ``/echo text``',
+                    '/re'    : 'I\'ll send your message to the previous channel! Note: This only works from %s' % theplus.mention,
+                    '/at'    : 'I\'ll send your message to the channel provided, eg: ``/at #validchannelname text``',   
+                    '/clear' : 'I\'ll clear every message in %s for you' % theplus.mention
+                   }
 
-client.run(TOKEN)
+bot.run(TOKEN)
