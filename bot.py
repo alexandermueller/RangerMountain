@@ -4,11 +4,12 @@
 import discord
 import os
 import re
-
+import giphypop
 
 TOKEN = 'NTM0NTczMDY0NTkyMTYyODE5.DyArTA.37TPWbxZarB8fPlsrE042tAKsHY'
 OUTPUT_CHANNEL = 'theplus' 
 
+giphy = giphypop.Giphy()
 bot = discord.Client()
 channelDict = {}
 commands = {}
@@ -59,6 +60,25 @@ async def forward(message):
     await sendQuotedMessage(channel, message)
     await addOkReaction(message)            
     
+async def meme(message):
+	channel = message.channel
+	searchTerms = message.content
+	results = giphy.search_list(phrase = searchTerms, limit = 1)
+
+	if len(results) == 0:
+		results = giphy.search_list(phrase = searchTerms, limit = 1)
+
+	if len(results) == 0:
+		await sendError(message, 'couldn\'t find a relevant meme for *%s*' % searchTerms)
+		return
+
+	gif = results[0]['url']
+	message.content = '%s\n%s' % (searchTerms, gif)
+
+	await mentionUser(channel, message.author, 'here\'s what I found! %s' % gif)
+	await sendQuotedMessage(theplus, message)
+
+
 async def clear():
     async for message in bot.logs_from(theplus):
         await bot.delete_message(message)
@@ -95,6 +115,8 @@ async def execute(command, message):
         await reply(message)
     elif command == '/at':
         await forward(message)
+    elif command == '/meme':
+    	await meme(message)
     elif command == '/clear':
         if message.channel != theplus:
             await sendError(message, '``/clear`` should only be executed from within %s' % theplus.mention)
@@ -193,6 +215,7 @@ async def on_ready():
                 '/help'  : 'Use this to tell you about all the things I can do!', 
                 '/re'    : 'I\'ll send your message to the previous channel! Note: this only works from %s' % theplus.mention,
                 '/at'    : 'I\'ll send your message to the channel provided, eg: ``/at #validchannelname text``',   
+                '/meme'  : 'I\'ll scour giphy for you and find the most relevant meme, eg: ``/meme some search terms``'
                 # /clear is disabled at the moment # '/clear' : 'I\'ll clear every message in %s for you' % theplus.mention
                }
     memberEmojis = { emoji.name : emoji for emoji in bot.get_all_emojis() }
