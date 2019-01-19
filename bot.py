@@ -191,7 +191,7 @@ async def on_ready():
     theplus = channelDict[OUTPUT_CHANNEL]
     commands = { 
                 '/help'  : 'Use this to tell you about all the things I can do!', 
-                '/re'    : 'I\'ll send your message to the previous channel! Note: This only works from %s' % theplus.mention,
+                '/re'    : 'I\'ll send your message to the previous channel! Note: this only works from %s' % theplus.mention,
                 '/at'    : 'I\'ll send your message to the channel provided, eg: ``/at #validchannelname text``',   
                 # /clear is disabled at the moment # '/clear' : 'I\'ll clear every message in %s for you' % theplus.mention
                }
