@@ -121,7 +121,8 @@ async def sendAttachment(channel, attachment):
     await bot.send_message(channel, attachment['url'])
 
 async def sendMessage(channel, content):
-    await bot.send_message(channel, content)
+    if content and content != '':
+        await bot.send_message(channel, content)
 
 async def sendQuotedMessage(channel, message):
     global lastMessageIsForwarded, lastLoggedMessage
@@ -138,6 +139,7 @@ async def sendQuotedMessage(channel, message):
 
     lastMessageIsForwarded[channel.name] = message
     lastLoggedMessage = message if channel == theplus else lastLoggedMessage
+    
     await sendMessage(channel, content)
     
     for attachment in message.attachments:
