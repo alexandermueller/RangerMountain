@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 
 # Work with Python 3.6
-import discord
 import os
 import re
+import io
+import discord
 import giphypop
+import requests
+from PIL import Image
+from io import BytesIO
 
 TOKEN = 'NTM0NTczMDY0NTkyMTYyODE5.DyArTA.37TPWbxZarB8fPlsrE042tAKsHY'
 OUTPUT_CHANNEL = 'theplus' 
 
+byteImgIO = io.BytesIO()
 giphy = giphypop.Giphy()
 bot = discord.Client()
 channelDict = {}
@@ -61,22 +66,30 @@ async def forward(message):
     await addOkReaction(message)            
     
 async def meme(message):
-	channel = message.channel
-	searchTerms = message.content
-	results = giphy.search_list(phrase = searchTerms, limit = 1)
+    channel = message.channel
+    searchTerms = message.content.strip()
 
-	if len(results) == 0:
-		results = giphy.search_list(phrase = searchTerms, limit = 1)
+    if not searchTerms or searchTerms == '':
+        await sendError(message, '``/meme`` needs at least one search term')
+        return
 
-	if len(results) == 0:
-		await sendError(message, 'couldn\'t find a relevant meme for *%s*' % searchTerms)
-		return
+    result = None
 
-	gif = results[0]['url']
-	message.content = '``/meme %s``\n%s' % (searchTerms, gif)
+    for gif in giphy.search(phrase = searchTerms, limit = 1):
+        result = gif
 
-	await mentionUser(channel, message.author, 'here\'s what I found! %s' % gif)
-	await sendQuotedMessage(theplus, message)
+    if not result:
+        for gif in giphy.search(term = searchTerms, limit = 1):
+            result = gif
+
+    if not result:
+        await sendError(message, 'couldn\'t find a relevant meme for *%s*' % searchTerms)
+        return    
+
+    await sendAttachment(channel, {'url' : result.fixed_height.url, 'title' : '%s.%s' % (result.id, result.type)})
+    
+    message.content = '``/meme %s``\n%s' % (searchTerms, gif)
+    await sendQuotedMessage(theplus, message)
 
 
 async def clear():
@@ -116,7 +129,7 @@ async def execute(command, message):
     elif command == '/at':
         await forward(message)
     elif command == '/meme':
-    	await meme(message)
+        await meme(message)
     elif command == '/clear':
         if message.channel != theplus:
             await sendError(message, '``/clear`` should only be executed from within %s' % theplus.mention)
@@ -140,7 +153,11 @@ async def sendError(message, errorString):
     await sendMessage(message.channel, '%s: %s 🤔' % (message.author.mention, errorString))
 
 async def sendAttachment(channel, attachment):
-    await bot.send_message(channel, attachment['url'])
+    url = attachment['url']
+    name = attachment['title'] if 'title' in attachment else url.split('/')[-1]
+    response = requests.get(url)
+
+    await bot.send_file(channel, BytesIO(response.content), filename = name)
 
 async def sendMessage(channel, content):
     if content and content != '':
