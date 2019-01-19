@@ -5,6 +5,7 @@ import discord
 import os
 import re
 
+
 TOKEN = 'NTM0NTczMDY0NTkyMTYyODE5.DyArTA.37TPWbxZarB8fPlsrE042tAKsHY'
 OUTPUT_CHANNEL = 'theplus' 
 
@@ -14,6 +15,7 @@ commands = {}
 theplus = None
 lastMessageIsForwarded = {} #{ channel.name : message or None if not forwarded }
 lastLoggedMessage = None
+memberEmojis = {}
 
 ########################################## Commands ##########################################
 
@@ -129,8 +131,9 @@ async def sendQuotedMessage(channel, message):
         return
 
     author = message.author
-    name = author.nick if author.nick else author.name
-    header = '%s *via* %s:\n' % (name, message.channel.mention) if isNewAuthorOrChannel(destinationName = channel.name, message = message) else '' 
+    name = author.display_name
+    emoji = str(memberEmojis[name]) if name in memberEmojis else ':sweat_smile:'
+    header = '%s %s *via* %s:\n' % (emoji, name, message.channel.mention) if isNewAuthorOrChannel(destinationName = channel.name, message = message) else '' 
     content = '%s%s' % (header, message.content)
 
     lastMessageIsForwarded[channel.name] = message
@@ -163,7 +166,7 @@ async def on_message(message):
 
 @bot.event
 async def on_ready():
-    global channelDict, theplus, commands
+    global channelDict, theplus, commands, memberEmojis
 
     print()
     print('Logged in as "%s" - %s ' % (bot.user.name, bot.user.id))
@@ -190,5 +193,6 @@ async def on_ready():
                 '/at'    : 'I\'ll send your message to the channel provided, eg: ``/at #validchannelname text``',   
                 # /clear is disabled at the moment # '/clear' : 'I\'ll clear every message in %s for you' % theplus.mention
                }
+    memberEmojis = { emoji.name : emoji for emoji in bot.get_all_emojis() }
 
 bot.run(TOKEN)
