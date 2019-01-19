@@ -73,7 +73,7 @@ async def meme(message):
 		return
 
 	gif = results[0]['url']
-	message.content = '%s\n%s' % (searchTerms, gif)
+	message.content = '``/meme`` %s\n%s' % (searchTerms, gif)
 
 	await mentionUser(channel, message.author, 'here\'s what I found! %s' % gif)
 	await sendQuotedMessage(theplus, message)
