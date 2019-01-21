@@ -4,18 +4,34 @@
 import os
 import re
 import io
+import os
+import sys
 import discord
 import giphypop
 import requests
 from PIL import Image
 from io import BytesIO
 
+STDOUT = sys.stdout
+STDERR = sys.stderr
 TOKEN = 'NTM0NTczMDY0NTkyMTYyODE5.DyArTA.37TPWbxZarB8fPlsrE042tAKsHY'
 OUTPUT_CHANNEL = 'theplus' 
 
+def silence():
+    null = open(os.devnull, 'w')
+    sys.stdout = null
+    sys.stderr = null
+
+def unSilence():
+    sys.stdout = STDOUT
+    sys.stderr = STDERR
+
+silence()
 byteImgIO = io.BytesIO()
 giphy = giphypop.Giphy()
 bot = discord.Client()
+unSilence()
+
 channelDict = {}
 commands = {}
 theplus = None
@@ -32,19 +48,6 @@ async def help(message):
         content += '``%s`` : %s\n' % (command, description)
 
     await mentionUser(message.channel, message.author, content)
-
-async def reply(message):    
-    if message.channel != theplus:
-        await sendError(message, '``/re`` doesn\'t work outside of %s' % theplus.mention)
-        return
-
-    if lastLoggedMessage == None:
-        await sendError(message, 'I haven\'t seen any messages from other channels yet!')
-        return
-    
-    destination = lastLoggedMessage.channel
-    await sendQuotedMessage(destination, message)
-    await addOkReaction(message)
 
 async def forward(message):
     channelRepresentation = firstWord(message.content)
@@ -86,10 +89,13 @@ async def meme(message):
         await sendError(message, 'couldn\'t find a relevant meme for *%s*' % searchTerms)
         return    
 
-    await sendAttachment(channel, {'url' : result.fixed_height.url, 'title' : '%s.%s' % (result.id, result.type)})
-    
-    message.content = '``/meme %s``\n%s' % (searchTerms, gif)
-    await sendQuotedMessage(theplus, message)
+    attachment = {'url' : result.fixed_height.url, 'title' : '%s.%s' % (result.id, result.type)}
+    await sendAttachment(channel, attachment)
+
+    destination = getForwardedMessageDestination(message)
+    message.content = '``/meme %s``' % searchTerms
+    await sendQuotedMessage(destination, message)
+    await sendAttachment(destination, attachment)
 
 
 async def clear():
@@ -105,6 +111,9 @@ def firstWord(string):
 def rest(string):
     components = string.split()
     return ' '.join(components[1:]) if len(components) > 1 else ''
+
+def getForwardedMessageDestination(message):
+    return theplus if message.channel != theplus else lastLoggedMessage.channel if lastLoggedMessage else None
 
 def isACommand(string):
     return string in commands
@@ -124,22 +133,20 @@ async def execute(command, message):
 
     if command == '/help':
         await help(message)
-    elif command == '/re':
-        await reply(message)
     elif command == '/at':
         await forward(message)
     elif command == '/meme':
         await meme(message)
-    elif command == '/clear':
-        if message.channel != theplus:
-            await sendError(message, '``/clear`` should only be executed from within %s' % theplus.mention)
-            return
+    # elif command == '/clear':
+    #     if message.channel != theplus:
+    #         await sendError(message, '``/clear`` should only be executed from within %s' % theplus.mention)
+    #         return
 
-        await clear()
-        await mentionUser(theplus, message.author, '``/clear`` complete! 👌')
+    #     await clear()
+    #     await mentionUser(theplus, message.author, '``/clear`` complete! 👌')
             
-async def addOkReaction(message):
-    await bot.add_reaction(message, '👌')
+# async def addOkReaction(message):
+#     await bot.add_reaction(message, '👌')
 
 # async def addThinkingReaction(message):
     # await bot.add_reaction(message, '🤔')
@@ -153,6 +160,9 @@ async def sendError(message, errorString):
     await sendMessage(message.channel, '%s: %s 🤔' % (message.author.mention, errorString))
 
 async def sendAttachment(channel, attachment):
+    if not channel or not attachment:
+        return
+
     url = attachment['url']
     name = attachment['title'] if 'title' in attachment else url.split('/')[-1]
     response = requests.get(url)
@@ -160,14 +170,16 @@ async def sendAttachment(channel, attachment):
     await bot.send_file(channel, BytesIO(response.content), filename = name)
 
 async def sendMessage(channel, content):
-    if content and content != '':
-        await bot.send_message(channel, content)
+    if not channel or not content or content == '':
+        return
+    
+    await bot.send_message(channel, content)
 
 async def sendQuotedMessage(channel, message):
     global lastMessageIsForwarded, lastLoggedMessage
 
     # Don't send quoted things to same channel
-    if message.channel == channel:
+    if not channel or not message or message.channel == channel:
         return
 
     author = message.author
@@ -202,8 +214,8 @@ async def on_message(message):
     if isACommand(firstWord(content)):
         await execute(firstWord(content), message)
         return
-
-    await sendQuotedMessage(theplus, message)
+     
+    await sendQuotedMessage(getForwardedMessageDestination(message), message)
 
 @bot.event
 async def on_ready():
@@ -230,7 +242,6 @@ async def on_ready():
     theplus = channelDict[OUTPUT_CHANNEL]
     commands = { 
                 '/help'  : 'Use this to tell you about all the things I can do!', 
-                '/re'    : 'I\'ll send your message to the previous channel! Note: this only works from %s' % theplus.mention,
                 '/at'    : 'I\'ll send your message to the channel provided, eg: ``/at #validchannelname text``',   
                 '/meme'  : 'I\'ll scour giphy for you and find the most relevant meme, eg: ``/meme some search terms``'
                 # /clear is disabled at the moment # '/clear' : 'I\'ll clear every message in %s for you' % theplus.mention
