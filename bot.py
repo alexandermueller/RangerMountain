@@ -66,7 +66,6 @@ async def forward(message):
         return
 
     await sendQuotedMessage(channel, message)
-    await addOkReaction(message)            
     
 async def meme(message):
     channel = message.channel
