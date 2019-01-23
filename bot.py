@@ -125,7 +125,8 @@ async def sendQuotedMessage(channel, message):
     author = message.author
     name = author.display_name
     emoji = str(memberEmojis[name]) if name in memberEmojis else ':sweat_smile:'
-    header = '%s %s *via* %s [said](https://discordapp.com/channels/%s/%s/%s):\n' % (emoji, name, message.channel.mention, message.server.id, message.channel.id, message.id) if isNewAuthorOrChannel(destinationName = channel.name, message = message) else '' 
+    # header = '%s %s *via* %s [said](https://discordapp.com/channels/%s/%s/%s):\n' % (emoji, name, message.channel.mention, message.server.id, message.channel.id, message.id) if isNewAuthorOrChannel(destinationName = channel.name, message = message) else '' 
+    header = '%s %s *via* %s:\n' % (emoji, name, message.channel.mention) if isNewAuthorOrChannel(destinationName = channel.name, message = message) else '' 
     content = '%s%s' % (header, message.content)
 
     lastMessageIsForwarded[channel.name] = message
