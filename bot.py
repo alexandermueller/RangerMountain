@@ -221,7 +221,6 @@ async def clear():
         await bot.delete_message(message)
 
 ########################################## Events ##########################################        
-        
 @bot.event
 async def on_message(message):
     global lastMessageIsForwarded
@@ -254,17 +253,29 @@ async def on_message_delete(deleted):
     global messageMap
 
     if deleted.id in messageMap:
+        print()
+        print('Source message was deleted + forwarded message exists:')
+        
         forwarded = messageMap[deleted.id]
-        channel = bot.get_channel(forwarded['channelId']) # doesn't like when you await here...
-        message = bot.get_message(channel, forwarded['messageId']) # or here ...
-        attachments = [bot.get_message(channel, attachmentId) for attachmentId in forwarded['attachmentIds']] # or here...
+        channel = bot.get_channel(forwarded['channelId'])
+        message = bot.get_message(channel, forwarded['messageId'])
+        attachments = [bot.get_message(channel, attachmentId) for attachmentId in forwarded['attachmentIds']]
+        
+        try:
+            await bot.delete_message(await message)
+            print('-> Forwarded message was deleted')
+        except:
+            print('-> Forwarded message could not be found for deletion')
 
-        await bot.delete_message(await message) # so await here instead!
-
-        for attachment in attachments:
-            await bot.delete_message(await attachment) # and here too!
-
-        del messageMap[deleted.id] # remove the entry
+        try: 
+            for attachment in attachments:
+                await bot.delete_message(await attachments)
+                print('-> Forwarded message\'s attachment was deleted')
+        except:
+            print('-> Forwarded message\'s attachments could not be found for deletion')
+        
+        del messageMap[deleted.id]
+        print()
 
 @bot.event
 async def on_ready():
