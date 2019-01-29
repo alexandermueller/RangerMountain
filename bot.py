@@ -32,15 +32,25 @@ giphy = giphypop.Giphy()
 bot = discord.Client()
 unSilence()
 
-channelDict = {}
+serverDict = {} # { server.name : { channel.name : channel } }
 commands = {}
-theplus = None
-lastMessageIsForwarded = {} # { channel.name : message or None if not forwarded }
-lastLoggedMessage = None
+theplusMap = {} # { server.name : channel }
+lastMessageIsForwarded = {} # { server.name : { channel.name : message or None if not forwarded } }
+lastLoggedMessage = {} # { server.name : message or None if none logged last }
 memberEmojis = {}
 messageMap = {} # { originalMessage.id : { 'channelId' : forwardedChannel.id, 'messageId' : forwardedMessage.id, 'attachmentIds' : [forwardedAttachment.id] } }
+lastLogWasMessage = False
 
 ########################################## Helpers ##########################################
+
+def logEvent(string, isMessage = False):
+    global lastLogWasMessage
+
+    if not lastLogWasMessage or lastLogWasMessage != isMessage:
+        string = '\n' + string
+    
+    print(string)
+    lastLogWasMessage = isMessage
 
 def firstWord(string):
     components = string.split()
@@ -51,23 +61,28 @@ def rest(string):
     return ' '.join(components[1:]) if len(components) > 1 else ''
 
 def getForwardedMessageDestination(message):
-    return theplus if message.channel != theplus else lastLoggedMessage.channel if lastLoggedMessage else None
+    serverName = message.channel.server.name
+    return theplusMap[serverName] if message.channel != theplusMap[serverName] else lastLoggedMessage[serverName].channel if serverName in lastLoggedMessage and lastLoggedMessage[serverName] else None
 
 def isACommand(string):
     return string in commands
 
-def isNewAuthorOrChannel(destinationName, message):
-    return (destinationName not in lastMessageIsForwarded or 
-            not lastMessageIsForwarded[destinationName] or 
-            lastMessageIsForwarded[destinationName].author != message.author or
-            lastMessageIsForwarded[destinationName].channel != message.channel) 
+def isNewAuthorOrChannel(destinationChannel, message):
+    channelName = destinationChannel.name
+    serverName = destinationChannel.server.name
+
+    return (channelName not in lastMessageIsForwarded[serverName] or 
+            not lastMessageIsForwarded[serverName][channelName] or 
+            lastMessageIsForwarded[serverName][channelName].author != message.author or
+            lastMessageIsForwarded[serverName][channelName].channel != message.channel) 
 
 async def execute(command, message):
     if command not in commands:
-        print('Error: command "%s" couldn\'t be found.')
+        logEvent('-> Error: command "%s" couldn\'t be found.')
         return
 
     message.content = rest(message.content)
+    serverName = message.channel.server.name
 
     if command == '/help':
         await help(message)
@@ -75,13 +90,6 @@ async def execute(command, message):
         await forward(message)
     elif command == '/meme':
         await meme(message)
-    # elif command == '/clear':
-    #     if message.channel != theplus:
-    #         await sendError(message, '``/clear`` should only be executed from within %s' % theplus.mention)
-    #         return
-
-    #     await clear()
-    #     await mentionUser(theplus, message.author, '``/clear`` complete! 👌')
             
 # async def addOkReaction(message):
 #     await bot.add_reaction(message, '👌')
@@ -122,15 +130,15 @@ async def sendQuotedMessage(channel, message):
     if not channel or not message or message.channel == channel:
         return
 
+    serverName = channel.server.name
     author = message.author
     name = author.display_name
     emoji = str(memberEmojis[name]) if name in memberEmojis else ':sweat_smile:'
-    # header = '%s %s *via* %s [said](https://discordapp.com/channels/%s/%s/%s):\n' % (emoji, name, message.channel.mention, message.server.id, message.channel.id, message.id) if isNewAuthorOrChannel(destinationName = channel.name, message = message) else '' 
-    header = '%s %s *via* %s:\n' % (emoji, name, message.channel.mention) if isNewAuthorOrChannel(destinationName = channel.name, message = message) else '' 
-    content = '%s%s' % (header, message.content)
+    header = '%s %s *via* %s:\n' % (emoji, name, message.channel.mention) if isNewAuthorOrChannel(destinationChannel = channel, message = message) else '' # TODO: add [said](https://discordapp.com/channels/%s/%s/%s):\n' % (message.server.id, message.channel.id, message.id)
+    content = '%s%s' % (header, message.clean_content)
 
-    lastMessageIsForwarded[channel.name] = message
-    lastLoggedMessage = message if channel == theplus else lastLoggedMessage
+    lastMessageIsForwarded[serverName][channel.name] = message
+    lastLoggedMessage[serverName] = message if channel == theplusMap[serverName] else lastLoggedMessage[serverName]
     
     forwardedMessage = await sendMessage(channel, content)
     forwardedAttachmentIds = []
@@ -147,9 +155,6 @@ async def sendQuotedMessage(channel, message):
             'messageId' : forwardedMessage.id,
             'attachmentIds' : forwardedAttachmentIds
         }
-
-async def editForwardedMessage(message, content):
-    return
 
 ########################################## Commands ##########################################
 
@@ -215,24 +220,24 @@ async def meme(message):
         'attachmentIds' : []
     }
 
-
-async def clear():
-    async for message in bot.logs_from(theplus):
-        await bot.delete_message(message)
-
 ########################################## Events ##########################################        
+
 @bot.event
 async def on_message(message):
     global lastMessageIsForwarded
 
-    # we do not want the bot to reply to itself
-    if message.author == bot.user or theplus == None:
+    # we do not want the bot to reply to itself + ignore any messages that don't have a forward channel
+    if message.author == bot.user or message.server.name not in theplusMap:
         return
 
     author = message.author
     channel = message.channel
+    server = channel.server
     content = message.content
-    lastMessageIsForwarded[channel.name] = None # Reset because last message on that channel wasn't sent by the bot
+
+    lastMessageIsForwarded[server.name][channel.name] = None # Reset because last message on that server's channel wasn't sent by the bot
+
+    logEvent('<"%s"::"#%s">[@%s]: %s' % (message.server.name, message.channel.name, message.author.name, message.clean_content), isMessage = True)
 
     try:
         if isACommand(firstWord(content)):
@@ -240,22 +245,14 @@ async def on_message(message):
             return
         await sendQuotedMessage(getForwardedMessageDestination(message), message)
     except:
-        await sendError(message, '``%s``' % sys.exec_info()[1])
-
-# @bot.event
-# async def on_message_edit(before, after):
-#     if message.id in messageMap:
-#         for forwardedMessage in messageMap[message.id]:
-#             editForwardedMessage(forwardedMessage, after.content)
+        await sendError(message, '``%s``' % sys.exec_info()[1]) # TODO: this is most likely useless, make it less so
 
 @bot.event
 async def on_message_delete(deleted):
     global messageMap
 
     if deleted.id in messageMap:
-        print()
-        print('Source message was deleted + forwarded message exists:')
-        
+        string = '-> Source message was deleted + forwarded message exists:'
         forwarded = messageMap[deleted.id]
         channel = bot.get_channel(forwarded['channelId'])
         message = bot.get_message(channel, forwarded['messageId'])
@@ -263,49 +260,140 @@ async def on_message_delete(deleted):
         
         try:
             await bot.delete_message(await message)
-            print('-> Forwarded message was deleted')
+            string += '\n->\tForwarded message was deleted'
         except:
-            print('-> Forwarded message could not be found for deletion')
+            string += '\n->\tForwarded message could not be found for deletion'
 
         try: 
             for attachment in attachments:
                 await bot.delete_message(await attachments)
-                print('-> Forwarded message\'s attachment was deleted')
+                string += '\n->\tForwarded message\'s attachment was deleted'
         except:
-            print('-> Forwarded message\'s attachments could not be found for deletion')
+            string += '\n->\tForwarded message\'s attachments could not be found for deletion'
         
         del messageMap[deleted.id]
-        print()
+        logEvent(string)
+
+@bot.event
+async def on_message_edit(before, after):
+    global messageMap
+
+    if before.id in messageMap:
+        string = '-> Source message was edited + forwarded message exists:'
+        
+        forwarded = messageMap[before.id]
+        channel = bot.get_channel(forwarded['channelId'])
+        message = bot.get_message(channel, forwarded['messageId'])
+        
+        try:
+            await bot.edit_message(await message, new_content = after.clean_content) 
+            string += '\n->\tForwarded message was edited'
+        except:
+            string += '\n->\tForwarded message could not be found for editing'
+
+        logEvent(string)
+
+@bot.event
+async def on_channel_create(channel):
+    logEvent('-> Channel "%s" was created on server "%s".' % (channel.name, channel.server.name))
+    updateServerMappings()
+
+@bot.event
+async def on_channel_delete(channel):
+    logEvent('-> Channel "%s" was created on server "%s".' % (channel.name, channel.server.name))
+    updateServerMappings()
+
+@bot.event
+async def on_channel_update(before, after):
+    string = '-> Channel "%s" was updated on server "%s".' % (before.name, before.server.name)
+    
+    if before.name != after.name:
+        string += '\n->\tChannel "%s" is now "%s" on server "%s".' % (before.name, after.name, before.server.name)
+
+    logEvent(string)
+    updateServerMappings()
+
+@bot.event
+async def on_server_join(server):
+    logEvent('-> Server "%s" was joined.' % server.name)
+    updateServerMappings()
+
+@bot.event
+async def on_server_remove(server):
+    logEvent('-> Server "%s" was removed.' % server.name)
+    updateServerMappings()
+
+@bot.event
+async def on_server_update(before, after):
+    string = '-> Server "%s" was updated.' % before.name
+
+    if before.name != after.name:
+        string += '\n->\tServer "%s" is now "%s".' % (before.name, after.name)
+
+    logEvent(string)
+    updateServerMappings()
+
+@bot.event
+async def on_server_emojis_update(before, after):
+    logEvent('-> The available emojis were updated.')
+    initializeEmojis()
 
 @bot.event
 async def on_ready():
-    global channelDict, theplus, commands, memberEmojis
+    logEvent('-> Logged in as "%s" - %s' % (bot.user.name, bot.user.id))
+    initializeCommands()
+    initializeEmojis()
+    updateServerMappings()
 
-    print()
-    print('Logged in as "%s" - %s ' % (bot.user.name, bot.user.id))
+########################################## Initialize Functions ##########################################        
 
-    channels = bot.get_all_channels()
-    channelDict = { channel.name : channel for channel in channels }
+def updateServerMappings():
+    global serverDict, theplusMap, lastMessageIsForwarded
+    string = '-> Updating Server Mappings:'
 
-    if OUTPUT_CHANNEL not in channelDict:
-        print()
-        print('Error: Channel "%s" couldn\'t be found.' % OUTPUT_CHANNEL)
-        print('The following channels were found:')
+    for server in bot.servers:
+        if server.name not in serverDict:
+            serverDict[server.name] = {}
+            lastMessageIsForwarded[server.name] = {}
 
-        for name, channel in channelDict.items():
-            print(' - \"%s\"' % name)
-        print()
+        for channel in server.channels:
+            if channel.name not in serverDict[server.name]:
+                serverDict[server.name][channel.name] = channel
+                lastMessageIsForwarded[server.name][channel.name] = None
 
-        bot.close()
-        os._exit(0)
-    
-    theplus = channelDict[OUTPUT_CHANNEL]
+    for serverName, serverChannelDict in serverDict.items():
+        if OUTPUT_CHANNEL not in serverChannelDict:
+            string += '\n->\tError: Channel "%s" couldn\'t be found in "%s".' % (OUTPUT_CHANNEL, serverName)
+            string += '\n->\tThe following channels were found:'
+
+            for channelName, channels in serverChannelDict.items():
+                string += '\n->\t - "%s" : "%s"' % (serverName, channelName)
+            
+            string += '\n->\tNot including server "%s" when listening for events.' % serverName
+            continue
+
+        theplusMap[serverName] = serverChannelDict[OUTPUT_CHANNEL]
+        lastLoggedMessage[serverName] = None
+
+    if len(theplusMap) == 0:
+        string += '\n->\tError: Channel "%s" couldn\'t be found in any of the servers this bot is a member of.' % OUTPUT_CHANNEL
+    else:
+        string += '\n->\tServer mappings updated successfully.'
+
+    logEvent(string)
+
+def initializeCommands():
+    global commands
     commands = { 
                 '/help'  : 'Use this to tell you about all the things I can do!', 
                 '/at'    : 'I\'ll send your message to the channel provided, eg: ``/at #validchannelname text``',   
-                '/meme'  : 'I\'ll scour giphy for you and find the most relevant meme, eg: ``/meme some search terms``'
-                # /clear is disabled at the moment # '/clear' : 'I\'ll clear every message in %s for you' % theplus.mention
+                '/meme'  : 'I\'ll scour giphy for you and find the most relevant meme, eg: ``/meme some search terms``',
                }
-    memberEmojis = { emoji.name : emoji for emoji in bot.get_all_emojis() }
+
+def initializeEmojis():
+    global memberEmojis
+    memberEmojis = { emoji.name : emoji for emoji in bot.get_all_emojis() } # This probably breaks if there are members/emojis in different channels with the same name...?
+
+########################################## Run Bot ##########################################        
 
 bot.run(TOKEN)
