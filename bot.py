@@ -88,6 +88,8 @@ async def execute(command, message):
         await help(message)
     elif command == '/at':
         await forward(message)
+    elif command == '/gif':
+        await gif(message)
     elif command == '/meme':
         await meme(message)
             
@@ -123,7 +125,7 @@ async def sendMessage(channel, content):
     
     return await bot.send_message(channel, content)
 
-async def sendQuotedMessage(channel, message):
+async def sendQuotedMessage(channel, message, cleanContent = True):
     global lastMessageIsForwarded, lastLoggedMessage, messageMap
 
     # Don't send quoted things to same channel
@@ -135,7 +137,7 @@ async def sendQuotedMessage(channel, message):
     name = author.display_name
     emoji = str(memberEmojis[name]) if name in memberEmojis else ':sweat_smile:'
     header = '%s %s *via* %s:\n' % (emoji, name, message.channel.mention) if isNewAuthorOrChannel(destinationChannel = channel, message = message) else '' # TODO: add [said](https://discordapp.com/channels/%s/%s/%s):\n' % (message.server.id, message.channel.id, message.id)
-    content = '%s%s' % (header, message.clean_content)
+    content = '%s%s' % (header, message.clean_content if cleanContent else message.content)
 
     lastMessageIsForwarded[serverName][channel.name] = message
     lastLoggedMessage[serverName] = message if channel == theplusMap[serverName] else lastLoggedMessage[serverName]
@@ -184,6 +186,46 @@ async def forward(message):
 
     await sendQuotedMessage(channel, message)
     
+async def gif(message):
+    global messageMap
+    channel = message.channel
+    searchTerms = message.content.strip()
+
+    result = None
+
+    if not searchTerms or searchTerms == '':
+        searchTerms = ''
+        result = giphy.random_gif()
+    elif searchTerms != '' :
+        for gif in giphy.search(phrase = searchTerms, limit = 1):
+            result = gif
+
+        if not result:
+            for gif in giphy.search(term = searchTerms, limit = 1):
+                result = gif
+
+        if not result:
+            await sendError(message, 'couldn\'t find a relevant gif for *%s*' % searchTerms)
+            return    
+
+    attachmentDict = {'url' : result.fixed_height.url, 'title' : '%s.%s' % (result.id, result.type)}
+    gifMessage = await sendAttachment(channel, attachmentDict)
+
+    destination = getForwardedMessageDestination(message)
+    message.content = '``/gif %s``' % (searchTerms if searchTerms != '' else '[%s]' % result.bitly)
+    
+    await sendQuotedMessage(destination, message, cleanContent = False)
+    forwardedGif = await sendAttachment(destination, attachmentDict)
+
+    if not destination:
+        return
+
+    messageMap[gifMessage.id] = {
+        'channelId' : destination.id,
+        'messageId' : forwardedGif.id,
+        'attachmentIds' : []
+    }
+
 async def meme(message):
     global messageMap
     channel = message.channel
@@ -193,14 +235,10 @@ async def meme(message):
         await sendError(message, '``/meme`` needs at least one search term')
         return
 
-    result = None
-
-    for gif in giphy.search(phrase = searchTerms, limit = 1):
-        result = gif
+    result = giphy.translate(phrase = searchTerms)
 
     if not result:
-        for gif in giphy.search(term = searchTerms, limit = 1):
-            result = gif
+        result = giphy.translate(term = searchTerms)
 
     if not result:
         await sendError(message, 'couldn\'t find a relevant meme for *%s*' % searchTerms)
@@ -211,8 +249,12 @@ async def meme(message):
 
     destination = getForwardedMessageDestination(message)
     message.content = '``/meme %s``' % searchTerms
-    await sendQuotedMessage(destination, message)
+
+    await sendQuotedMessage(destination, message, cleanContent = False)
     forwardedMeme = await sendAttachment(destination, attachmentDict)
+
+    if not destination:
+        return
 
     messageMap[memeMessage.id] = {
         'channelId' : destination.id,
@@ -385,9 +427,10 @@ def updateServerMappings():
 def initializeCommands():
     global commands
     commands = { 
-                '/help'  : 'Use this to tell you about all the things I can do!', 
-                '/at'    : 'I\'ll send your message to the channel provided, eg: ``/at #validchannelname text``',   
-                '/meme'  : 'I\'ll scour giphy for you and find the most relevant meme, eg: ``/meme some search terms``',
+                '/help' : 'Use this to tell you about all the things I can do!', 
+                '/at'   : 'I\'ll send your message to the channel provided, eg: ``/at #validchannelname text``',   
+                '/gif'  : 'I\'ll scour giphy for you and find the most relevant gif, eg: ``/gif some search terms``. If given nothing, then I\'ll find something at random!',
+                '/meme' : 'I\'ll translate the input into a meme, eg: ``/meme some search terms``'
                }
 
 def initializeEmojis():
