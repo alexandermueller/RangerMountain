@@ -208,7 +208,7 @@ async def gif(message):
             await sendError(message, 'couldn\'t find a relevant gif for *%s*' % searchTerms)
             return    
 
-    attachmentDict = {'url' : result.fixed_height.url, 'title' : '%s.%s' % (result.id, result.type)}
+    attachmentDict = { 'url' : result.fixed_height.url, 'title' : '%s.%s' % (result.id, result.type) }
     gifMessage = await sendAttachment(channel, attachmentDict)
 
     destination = getForwardedMessageDestination(message)
@@ -244,7 +244,7 @@ async def meme(message):
         await sendError(message, 'couldn\'t find a relevant meme for *%s*' % searchTerms)
         return    
 
-    attachmentDict = {'url' : result.fixed_height.url, 'title' : '%s.%s' % (result.id, result.type)}
+    attachmentDict = { 'url' : result.fixed_height.url, 'title' : '%s.%s' % (result.id, result.type) }
     memeMessage = await sendAttachment(channel, attachmentDict)
 
     destination = getForwardedMessageDestination(message)
