@@ -26,11 +26,11 @@ def unSilence():
     sys.stdout = STDOUT
     sys.stderr = STDERR
 
-# silence()
+silence()
 byteImgIO = io.BytesIO()
 giphy = giphypop.Giphy()
 bot = discord.Client()
-# unSilence()
+unSilence()
 
 serverDict = {} # { server.name : { channel.name : channel } }
 commands = {}
