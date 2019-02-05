@@ -9,7 +9,7 @@ import sys
 import discord
 import giphypop
 import requests
-from PIL import Image
+from PIL import Image, ImageOps, ImageDraw
 from io import BytesIO
 
 STDOUT = sys.stdout
@@ -46,7 +46,7 @@ lastLogWasMessage = False
 def logEvent(string, isMessage = False):
     global lastLogWasMessage
 
-    if not lastLogWasMessage or lastLogWasMessage != isMessage:
+    if lastLogWasMessage != isMessage:
         string = '\n' + string
     
     print(string)
@@ -336,6 +336,31 @@ async def on_message_edit(before, after):
         logEvent(string)
 
 @bot.event
+async def on_member_join(member):
+	logEvent('-> Member "%s" joined server "%s".' % (member.display_name, member.server.name))
+	#initializeEmojis() -> this would be a nice to have
+	initializeAvatars(members = [member])
+
+@bot.event
+async def on_member_remove(member):
+	logEvent('-> Member "%s" left server "%s".' % (member.display_name, member.server.name))
+	#initializeEmojis() -> this would be a nice to have
+	initializeAvatars(members = [member])	
+
+@bot.event
+async def on_member_update(before, after):
+	string = '-> Member "%s" was updated on server "%s".' % (before.name, before.server.name)
+
+	if before.display_name != after.display_name:
+		string += '\n->\tMember "%s" is now "%s".' % (before.display_name, after.display_name, before.server.name)
+	elif before.avatar_url != after.avatar_url:
+		string += '\n->\tMember "%s" updated their avatar.' % before.display_name	
+		initializeAvatars(members = [after])
+	
+	logEvent(string)
+	#initializeEmojis() -> this would be a nice to have	
+
+@bot.event
 async def on_channel_create(channel):
     logEvent('-> Channel "%s" was created on server "%s".' % (channel.name, channel.server.name))
     updateServerMappings()
@@ -385,7 +410,9 @@ async def on_ready():
     logEvent('-> Logged in as "%s" - %s' % (bot.user.name, bot.user.id))
     initializeCommands()
     initializeEmojis()
+    initializeAvatars()
     updateServerMappings()
+
 
 ########################################## Initialize Functions ##########################################        
 
@@ -436,6 +463,27 @@ def initializeCommands():
 def initializeEmojis():
     global memberEmojis
     memberEmojis = { emoji.name : emoji for emoji in bot.get_all_emojis() } # This probably breaks if there are members/emojis in different channels with the same name...?
+
+def initializeAvatars(members = []):
+	if not os.path.exists('./avatars'):
+		os.makedirs('./avatars')
+
+	members = bot.get_all_members() if members == [] else members
+
+	for member in members:
+		url = member.avatar_url
+
+		if url != '':
+			response = requests.get(url)
+			img = Image.open(BytesIO(response.content))
+			size = (128, 128)
+			mask = Image.new('L', size, 0)
+			draw = ImageDraw.Draw(mask) 
+			draw.ellipse((0, 0) + size, fill=255)
+			output = ImageOps.fit(img, mask.size, centering=(0.5, 0.5))
+			output.putalpha(mask)
+			output.save('./avatars/%s.png' % member.display_name)
+
 
 ########################################## Run Bot ##########################################        
 
