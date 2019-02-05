@@ -471,10 +471,8 @@ def initializeAvatars(members = []):
 	members = bot.get_all_members() if members == [] else members
 
 	for member in members:
-		url = member.avatar_url
-
-		if url != '':
-			response = requests.get(url)
+		if member.avatar_url != '':
+			response = requests.get(member.avatar_url)
 			img = Image.open(BytesIO(response.content))
 			size = (128, 128)
 			mask = Image.new('L', size, 0)
