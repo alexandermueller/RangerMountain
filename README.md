@@ -1,7 +1,7 @@
 # RangerMountain
 Discord Bot That Outputs All Text Into Its Own Channel
 
-`Requires python 3.6`
+**Requires python 3.6**
 
 ```
 $ source env/bin/activate
