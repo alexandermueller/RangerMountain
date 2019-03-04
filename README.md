@@ -55,7 +55,7 @@ Anytime this bot is running, you can type `/help` and send the message in the di
 - `/meme` : I'll translate the input into a meme, eg: `/meme some search terms`
 
 Assuming the OUTPUT_CHANNEL exists on each of the servers it's added to, it will forward every message sent on those servers to their
-respective OUTPUT_CHANNEL. The bot maintains the normal message formatting that discord already uses, and notifies which channel the message was posted. If anyone sends messages from within the OUTPUT_CHANNEL, it will post a reply within the source channel the previous message came from. Otherwise, you can use `/at` to send your message to the right channel.
+respective OUTPUT_CHANNEL. The bot maintains the normal message formatting that discord already uses, and states which channel the original message was posted. If anyone sends messages from within the OUTPUT_CHANNEL, it will post a reply to the source channel the previous message came from. Otherwise, you can use `/at` to send your message to the right channel if lots of activity keeps changing the last channel that was listened to.
 
 The following events are listened to by the bot already:
 - on_message
