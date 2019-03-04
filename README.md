@@ -7,4 +7,5 @@ Discord Bot That Outputs All Text Into Its Own Channel
 (Generate Token On Discord.com)
 
 (Create Token File) $ echo -n "gEnerATEdTokEnTeXt_123SALSDKJasdjk.fasdfklasdfjALSK" > .token.txt
+
 (Run!)              $ ./bot.py
