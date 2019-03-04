@@ -9,3 +9,9 @@ $ source env/bin/activate
 $ echo -n "gEnerATEdTokEnTeXt_123SALSDKJasdjk.fasdfklasdfjALSK" > .token.txt
 $ ./bot.py
 ```
+
+Deactivate environment:
+
+```
+$ deactivate
+```
