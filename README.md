@@ -1,6 +1,8 @@
 # RangerMountain
 Discord Bot That Outputs All Text Into Its Own Channel
 
+I didn't like how a discord server I was on had many channels and I would always have to switch between them to stay up to date on what's going on, which is very difficult to do when in the middle of playing a game on another screen! I made this bot so that you only have to have a single channel open on a server to be able to follow all the conversations happening there. 
+
 **Requires python 3.6**
 
 First time setup:
@@ -37,6 +39,12 @@ Deactivate environment (when you're done with the bot):
 $ deactivate
 ```
 
+**Adding Emojis to your server:**
+
+In the future, I may add functionality to add and manage the emojis automatically, but this only works when the bot has permission to do this. For now, it has to be done by anyone that has the permissions to do so on their respective discord server.
+
+This bot uses emojis to mimic how discord shows the avatar of whoever sent the messgae it forwarded. This means there's one more minor step to follow when adding the bot to your server. Whenever the bot is started, or avatars are updated on a discord channel, the bot will grab and update the avatars it knows about. All you have to do is open the settings for each of the servers it runs in, and under the emoji tab, upload the emojis that it saves inside the `.../RangerMountain/avatars` folder. You should also leave the default names of the emojis as the bot named them to mimic the user nicknames. If a user changes their nickname, then update their emoji name accordingly inside the same emoji settings tab. Whenever a user updates their emoji, the user will have to also manually update the emoji by uploading the new avatar image saved in the avatars folder. If there are any users that don't have an emoji, it will use 😅 instead.
+
 **Features:**
 
 Anytime this bot is running, you can type `/help` and send the message in the discord app (on a server it has been added to) to have it show you how you can use it:
@@ -45,6 +53,9 @@ Anytime this bot is running, you can type `/help` and send the message in the di
 - `/at` : I'll send your message to the channel provided, eg: `/at #validchannelname text`
 - `/gif` : I'll scour giphy for you and find the most relevant gif, eg: `/gif some search terms`. If given nothing, then I'll find something at random!
 - `/meme` : I'll translate the input into a meme, eg: `/meme some search terms`
+
+Assuming the OUTPUT_CHANNEL exists on each of the servers it's added to, it will forward every message sent on those servers to their
+respective OUTPUT_CHANNEL. The bot maintains the normal message formatting that discord already uses, and notifies which channel the message was posted. If anyone sends messages from within the OUTPUT_CHANNEL, it will post a reply within the source channel the previous message came from. Otherwise, you can use `/at` to send your message to the right channel.
 
 The following events are listened to by the bot already:
 - on_message
