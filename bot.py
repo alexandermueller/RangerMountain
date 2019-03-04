@@ -4,7 +4,6 @@
 import os
 import re
 import io
-import os
 import sys
 import discord
 import giphypop
@@ -14,7 +13,6 @@ from io import BytesIO
 
 STDOUT = sys.stdout
 STDERR = sys.stderr
-TOKEN = 'NTM0NTczMDY0NTkyMTYyODE5.DyArTA.37TPWbxZarB8fPlsrE042tAKsHY'
 OUTPUT_CHANNEL = 'theplus' 
 
 def silence():
@@ -485,4 +483,14 @@ def initializeAvatars(members = []):
 
 ########################################## Run Bot ##########################################        
 
-bot.run(TOKEN)
+string = '-> Retrieving Bot Token:'
+
+if not os.path.exists('token.txt'):
+    string += '\n->\tError: Token file "./token.txt" couldn\'t be found in ".../RangerMountain".' 
+    string += '\n->\t       Generate a new token on discord for your bot and place it inside'
+    string += '\n->\t       ".../RangerMountain/token.txt"'
+    logEvent(string)
+else:
+    tokenFile = open('token.txt', 'r')
+    token = tokenFile.readline()
+    bot.run(token)

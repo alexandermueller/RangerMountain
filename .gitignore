@@ -105,3 +105,6 @@ venv.bak/
 
 # images
 *.png
+
+# token
+.token.txt
