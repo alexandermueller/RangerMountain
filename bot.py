@@ -285,7 +285,7 @@ async def on_message(message):
             return
         await sendQuotedMessage(getForwardedMessageDestination(message), message)
     except:
-        await sendError(message, '``%s``' % sys.exec_info()[1]) # TODO: this is most likely useless, make it less so
+        await sendError(message, 'Something went wrong while sending the message!') # sys.exec_info()[1] # TODO: this is mostly useless, make it less so
 
 @bot.event
 async def on_message_delete(deleted):
@@ -485,12 +485,16 @@ def initializeAvatars(members = []):
 
 string = '-> Retrieving Bot Token:'
 
-if not os.path.exists('token.txt'):
-    string += '\n->\tError: Token file "./token.txt" couldn\'t be found in ".../RangerMountain".' 
+if not os.path.exists('.token.txt'):
+    string += '\n->\tError: Token file "./.token.txt" couldn\'t be found in ".../RangerMountain".' 
     string += '\n->\t       Generate a new token on discord for your bot and place it inside'
-    string += '\n->\t       ".../RangerMountain/token.txt"'
+    string += '\n->\t       ".../RangerMountain/.token.txt"'
     logEvent(string)
 else:
-    tokenFile = open('token.txt', 'r')
+    tokenFile = open('.token.txt', 'r')
     token = tokenFile.readline()
+
+    string += '\n->\t.token.txt was found successfully.'
+    logEvent(string)
+
     bot.run(token)
