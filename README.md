@@ -39,7 +39,14 @@ $ deactivate
 
 **Features:**
 
-Anytime this bot is running, you can type `/help` and send the message in the discord app (on a server it has been added to) to have it show you how you can use it.
+Anytime this bot is running, you can type `/help` and send the message in the discord app (on a server it has been added to) to have it show you how you can use it:
+
+```
+/help : Use this to tell you about all the things I can do!
+/at : I'll send your message to the channel provided, eg: /at #validchannelname text
+/gif : I'll scour giphy for you and find the most relevant gif, eg: /gif some search terms. If given nothing, then I'll find something at random!
+/meme : I'll translate the input into a meme, eg: /meme some search terms
+```
 
 The following events are listened to by the bot already:
 - on_message
@@ -57,4 +64,4 @@ The following events are listened to by the bot already:
 - on_server_emojis_update
 - on_ready
 
-Should you need to add any extra functionality to the bot, visit discord.py to find out how: https://discordpy.readthedocs.io/en/latest/api.html
+Should you need to add any extra functionality to the bot, visit discordpy's site to find out how: https://discordpy.readthedocs.io/en/latest/api.html
