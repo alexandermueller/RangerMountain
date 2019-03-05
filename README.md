@@ -15,10 +15,11 @@ First time setup:
 $ cd /<wherever this is stored>/RangerMountain/
 $ echo -n "gEnerATEdTokEnTeXt_123SALSDKJasdjk.fasdfklasdfjALSK" > .token.txt
 ```
-3. Edit bot.py and change OUTPUT_CHANNEL value to new desired channel name:
+4. Edit bot.py and change OUTPUT_CHANNEL value to new desired channel name:
 ```
 line 16: OUTPUT_CHANNEL = 'theplus'
 ```
+5. Make sure OUTPUT_CHANNEL exists on each server this bot will listen to, otherwise you must add a new channel with the exact same name as OUTPUT_CHANNEL to each server through the discord app.
 
 **Now we can run the bot:**
 
@@ -41,7 +42,7 @@ $ deactivate
 
 **Adding Emojis to your server:**
 
-In the future, I may add functionality to add and manage the emojis automatically, but this only works when the bot has permission to do this. For now, it has to be done by anyone that has the permissions to do so on their respective discord server.
+In the future, I may add functionality to add and manage the emojis automatically, but this only works when the bot has the proper permissions. For now, it has to be done by anyone that has the permissions to do so on their respective discord server.
 
 This bot uses emojis to mimic how discord shows the avatar of whoever sent the messgae it forwarded. This means there's one more minor step to follow when adding the bot to your server. Whenever the bot is started, or avatars are updated on a discord channel, the bot will grab and update the avatars it knows about. All you have to do is open the settings for each of the servers it runs in, and under the emoji tab, upload the emojis that it saves inside the `.../RangerMountain/avatars` folder. You should also leave the default names of the emojis as the bot named them to mimic the user nicknames. If a user changes their nickname, then update their emoji name accordingly inside the same emoji settings tab. Whenever a user updates their emoji, the user will have to also manually update the emoji by uploading the new avatar image saved in the avatars folder. If there are any users that don't have an emoji, it will use 😅 instead.
 
